@@ -161,6 +161,27 @@
     .brandbar { padding: 12px 16px; }
     .stage { padding: 100px 16px 30px; }
   }
+
+  .btn-print {
+    background: var(--paper); color: var(--brand-dark); border: 1.5px solid var(--brand);
+  }
+  .btn-print:hover { background: var(--brand-wash); }
+
+  .printSheet { display: none; }
+  @media print {
+    .topbar, .brandbar, .stage { display: none !important; }
+    .printSheet {
+      display: block !important;
+      padding: 24px; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; color: #201e1f;
+    }
+    .printSheet h1 { font-size: 20px; margin: 0 0 4px; }
+    .printSheet .psub { font-size: 13px; color: #6b6a6d; margin: 0 0 20px; }
+    .printSheet .pitem { margin-bottom: 16px; page-break-inside: avoid; }
+    .printSheet .pitem .pq { font-size: 12px; font-weight: 700; color: #8a371f; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .02em; }
+    .printSheet .pitem .pt { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .printSheet .pitem .pa { font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
+    .printSheet hr { border: none; border-top: 1px solid #e6e1dd; margin: 18px 0; }
+  }
 </style>
 </head>
 <body>
@@ -175,6 +196,7 @@
 </div>
 
 <div class="stage"><div class="card" id="card"></div></div>
+<div class="printSheet" id="printSheet"></div>
 
 <script>
 (function(){
@@ -183,7 +205,7 @@
      1) CONFIGURAÇÃO: cole aqui a URL do Apps Script depois de
      publicar o backend (veja o guia de configuração).
      ========================================================== */
-  const API_URL = "https://script.google.com/macros/s/AKfycbxP0s3ahjf7gFHw6Ngb8a6Z9WtR_UBMpuQUanDAwKSRELj97jDMXP3Tl4ydz0XFXBB1tQ/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbz8g3UBP_0qqi70es3IN8U_bfgbwKN29L6HmMAB0bYEKT5XHviEHwImQ8WQYw37bOdktQ/exec";
 
   /* ==========================================================
      2) LÍDERES: substitua pelos 16 nomes reais antes de enviar
@@ -313,6 +335,16 @@
       kind: "scale",
       auto: {},
       fields: [ { id: "nota" } ]
+    });
+
+    steps.push({
+      kicker: "Fechamento do dia",
+      title: "O que levo de hoje para transformar em uma atitude concreta na minha vida ou serviço ministerial?",
+      kind: "campos",
+      auto: {},
+      fields: [
+        { id: "atitude_concreta", el: "textarea", label: "Sua resposta" }
+      ]
     });
 
     return steps;
@@ -530,7 +562,41 @@
         <h1>Registrado, obrigado!</h1>
         <p>Sua visão de hoje já está guardada. Amanhã, depois do encontro na casa, volte aqui
         e registre o próximo dia.</p>
+        <div class="nav-row" style="justify-content:center; margin-top:24px;">
+          <button class="btn-print" id="btnPrint">Imprimir / salvar em PDF</button>
+        </div>
       </div>
+    `;
+    buildPrintSheet();
+    document.getElementById("btnPrint").addEventListener("click", () => { window.print(); });
+  }
+
+  function buildPrintSheet(){
+    const sheet = document.getElementById("printSheet");
+    const itens = STEPS.map(step => {
+      if (step.kind === "scale") {
+        const v = state.respostas["nota"];
+        return `<div class="pitem">
+          <div class="pq">${esc(step.kicker)}</div>
+          <div class="pt">${esc(step.title)}</div>
+          <div class="pa">${v ? v + " / 10" : "(em branco)"}</div>
+        </div>`;
+      }
+      return step.fields.map(f => {
+        const a = state.respostas[f.id] || "";
+        return `<div class="pitem">
+          <div class="pq">${esc(step.kicker)} · ${esc(step.title)}</div>
+          <div class="pt">${esc(f.label)}</div>
+          <div class="pa">${a ? esc(a) : "(em branco)"}</div>
+        </div>`;
+      }).join("");
+    }).join("");
+
+    sheet.innerHTML = `
+      <h1>Diário de Bordo · Ressurgência 2026</h1>
+      <div class="psub">${esc(state.nome)} · ${esc(diaLabel())} · ${new Date().toLocaleDateString("pt-BR")}</div>
+      <hr>
+      ${itens}
     `;
   }
 
